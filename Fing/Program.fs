@@ -41,4 +41,5 @@ For F# type syntax, refer to
 or, for an introduction, see 
   lorgonblog.spaces.live.com/Blog/cns!701679AD17B6D310!1077.entry
    "
+  System.Console.ReadKey() |> ignore
   0

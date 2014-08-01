@@ -4,7 +4,7 @@
 
 /// code specific to types retrieved from FSharp.Powerpack.Metadata
 module FSharpTypes
-open Microsoft.FSharp.Metadata
+open Microsoft.FSharp.Compiler.SourceCodeServices
 open Types
 
 let rec debinarize t =
@@ -40,9 +40,9 @@ let rec optionsum = function
 TODO: cvtParam is not done, it really only does type defaulting as yet
 *)
 let rec cvt (e:FSharpType) =
-  if e.IsTuple then
+  if e.IsTupleType then
     Tuple (e.GenericArguments |> Seq.map cvt |> List.ofSeq)
-  elif e.IsFunction then
+  elif e.IsFunctionType then
       Arrow (e.GenericArguments |> Seq.map cvt |> List.ofSeq)
   elif e.IsGenericParameter then
     cvtParam e.GenericParameter // TODO: cvtParam is very much not done
@@ -59,13 +59,13 @@ and cvtParam (param:FSharpGenericParameter) =
   else
     match param.Constraints 
           |> Seq.tryFind (fun c -> c.IsDefaultsToConstraint 
-                                   && c.DefaultsToTarget.IsNamed) with
-    | Some def -> def.DefaultsToTarget.NamedEntity |> canonicalType
+                                   && c.DefaultsToConstraintData.DefaultsToTarget.IsNamedType) with
+    | Some def -> def.DefaultsToConstraintData.DefaultsToTarget.TypeDefinition |> canonicalType
     | None -> Var (Normal param.Name)
     // param.Constraints |> Seq.map whenify |> Seq.fold SOMETHING param
 (* Gets something stable from an FSharpEntity so that we can see if two are identical *)
 and canonicalType (e:FSharpEntity) =
-  if e.IsAbbreviation then
+  if e.IsFSharpAbbreviation then
     cvt e.AbbreviatedType
   else
     // the dealias here is a hack because
@@ -89,13 +89,13 @@ and whenify (param:FSharpGenericParameter) (con:FSharpGenericParameterConstraint
   elif con.IsEnumConstraint then
     Enum(Normal param.Name, cvt con.EnumConstraintTarget)
   elif con.IsDelegateConstraint then
-    Delegate(Normal param.Name, cvt con.DelegateTupledArgumentType, cvt con.DelegateReturnType)
+    Delegate(Normal param.Name, cvt con.DelegateConstraintData.DelegateTupledArgumentType, cvt con.DelegateConstraintData.DelegateReturnType)
   elif con.IsCoercesToConstraint then
     Subtype(Normal param.Name, cvt con.CoercesToTarget)
   elif con.IsMemberConstraint then
     Sig(Structural param.Name,
-        Id con.MemberName,
-        Arrow (List.ofSeq (Seq.map cvt con.MemberArgumentTypes) @ [cvt con.MemberReturnType]), 
+        Id con.MemberConstraintData.MemberName,
+        Arrow (List.ofSeq (Seq.map cvt con.MemberConstraintData.MemberArgumentTypes) @ [cvt con.MemberConstraintData.MemberReturnType]), 
         Function)
   else
     failwith "basically this style of data structure just sucks"
