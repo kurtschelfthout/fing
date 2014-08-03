@@ -16,7 +16,7 @@ let rec debinarize t =
   Types.map debinarise id t
 
 let isArray (e:FSharpType) =
-  let name = e.NamedEntity.DisplayName
+  let name = e.TypeDefinition.DisplayName
   // it appears that DisplayName can either be array or []
   // I think this is inconsistency on the part of either the Powerpack or (more likely)
   // the F# runtime in allowing Set.ofArray : array<'t> -> Set<'t>
@@ -25,7 +25,7 @@ let isArray (e:FSharpType) =
   name = "array" || name.StartsWith "[" && name.EndsWith "]"
 /// e must be the FSharpType of an array
 let dimensions (e:FSharpType) = 
-  match e.NamedEntity.DisplayName with
+  match e.TypeDefinition.DisplayName with
   | "array" -> 1
   | brackets -> brackets.Length - 1
 let tryFindConstraint (param:FSharpGenericParameter) (p,f) =
@@ -49,7 +49,7 @@ let rec cvt (e:FSharpType) =
   elif e |> isArray then // It only has in defaulting so far
     Array(dimensions e, e.GenericArguments |> Seq.map cvt |> Seq.head)
   else
-    match e.NamedEntity |> canonicalType, e.GenericArguments |> Seq.map cvt |> List.ofSeq with
+    match e.TypeDefinition |> canonicalType, e.GenericArguments |> Seq.map cvt |> List.ofSeq with
     | t,[] -> t
     | Generic(t,_),args -> Generic(t,args)
     | t,args -> Generic(t, args)
@@ -59,7 +59,7 @@ and cvtParam (param:FSharpGenericParameter) =
   else
     match param.Constraints 
           |> Seq.tryFind (fun c -> c.IsDefaultsToConstraint 
-                                   && c.DefaultsToConstraintData.DefaultsToTarget.IsNamedType) with
+                                   && c.DefaultsToConstraintData.DefaultsToTarget.HasTypeDefinition) with
     | Some def -> def.DefaultsToConstraintData.DefaultsToTarget.TypeDefinition |> canonicalType
     | None -> Var (Normal param.Name)
     // param.Constraints |> Seq.map whenify |> Seq.fold SOMETHING param

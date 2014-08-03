@@ -12,38 +12,47 @@ open Search
 
 type Result = {
   ent : FSharpEntity
-  mem : FSharpMemberOrVal
+  mem : FSharpMemberFunctionOrValue
   typ : Typ
 }
-let checker = InteractiveChecker.Create()
-let projectOptions = 
-    checker.GetProjectOptionsFromCommandLineArgs
-       ("Fing.fsproj",
-        [| yield "--simpleresolution" 
-           yield "--noframework" 
-           yield "--debug:full" 
-           yield "--define:DEBUG" 
-           yield "--optimize-" 
-           yield "--out:" + "Fing.dll"
-           yield "--warn:3" 
-           yield "--fullpaths" 
-           yield "--flaterrors" 
-           yield "--target:library" 
-           yield @"C:\Users\Kurt\Projects\fing\Fing\Util.fs"
-           //yield Inputs.fileName1
-           //yield Inputs.fileName2
-           let references = 
-             [ @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll" 
-               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll" 
-               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll" 
-               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll" 
-               @"C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.1.0\FSharp.Core.dll"]  
-           for r in references do
-                 yield "-r:" + r |])
+
+
+let loadAssemblies refs =
+  let checker = InteractiveChecker.Create()
+  let projectOptions = 
+      checker.GetProjectOptionsFromCommandLineArgs
+         ("Fing.fsproj",
+          [| yield "--simpleresolution" 
+             yield "--noframework" 
+             yield "--debug:full" 
+             yield "--define:DEBUG" 
+             yield "--optimize-" 
+             yield "--out:" + "Fing.dll"
+             yield "--warn:3" 
+             yield "--fullpaths" 
+             yield "--flaterrors" 
+             yield "--target:library" 
+             yield @"C:\Users\Kurt\Projects\fing\Fing\Util.fs"
+             //yield Inputs.fileName1
+             //yield Inputs.fileName2
+             let references = 
+               [ @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll" 
+                 @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll" 
+                 @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Core.dll" 
+                 @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Numerics.dll" 
+                 @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Configuration.dll" 
+                 @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Xml.dll" 
+                 @"C:\Program Files (x86)\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.1.0\FSharp.Core.dll"]
+                 @ (Seq.toList refs)
+             for r in references do
+                   yield "-r:" + r |])
  
-let wholeProjectResults = checker.ParseAndCheckProject(projectOptions) |> Async.RunSynchronously
-let referenced = wholeProjectResults.ProjectContext.GetReferencedAssemblies()
-let fslib = referenced |> List.find (fun r -> r.SimpleName = "FSharp.Core")
+  let wholeProjectResults = checker.ParseAndCheckProject(projectOptions) |> Async.RunSynchronously
+  let referenced = wholeProjectResults.ProjectContext.GetReferencedAssemblies()
+  let fslib = referenced |> List.find (fun r -> r.SimpleName = "FSharp.Core")
+  referenced
+//  let refsResult = referenced |> List.filter (fun r -> refs |> List.exists(fun name -> name = r.SimpleName))
+//  fslib, refsResult
 
 let entite { ent = e } = e
 let membre { mem = m } = m
@@ -53,23 +62,30 @@ let private formatResult { ent = e; mem = m; typ = t } =
 // TODO: Cache this on disk or something
 let mutable private assemblies : Set<string> = Set.empty
 let mutable private types : list<Result> = []
+
 let private updateReferences (refs : seq<FSharpAssembly>) =
   types <- 
-    [for ref in Seq.append (Seq.singleton fslib) refs do
-     for e in ref.Contents.Entities do
-     for m in e.MembersOrValues do
-     yield {ent=e; mem=m; typ=FSharpTypes.cvt m.FullType |> index |> FSharpTypes.debinarize} ]
+    [ for ref in refs do
+        for e in ref.Contents.Entities do
+          for m in e.MembersFunctionsAndValues do
+            yield {ent=e; mem=m; typ=FSharpTypes.cvt m.FullType |> index |> FSharpTypes.debinarize} ]
+
 let addReferences news =
-  assemblies <- assemblies |>Set.union<| set news
-  let optionAssembly assembly = None
-//    try
-//      FSharpAssembly.FromFile assembly |> Some
-//    with
-//      | :? System.IO.FileNotFoundException -> printfn "%s was not found" assembly; None
-//      // Indicates a C# assembly, someday I'll handle this
-//      | :? System.ArgumentException -> printfn "%s is not an F# assembly" assembly; None 
-  updateReferences (Seq.choose id (Seq.map optionAssembly assemblies))
-do addReferences []
+  assemblies <- assemblies  |>Set.union<| set news
+  assemblies |> loadAssemblies |> updateReferences
+//let addReferences news =
+//  assemblies <- assemblies |>Set.union<| set news
+//  let optionAssembly assembly = None
+////    try
+////      FSharpAssembly.FromFile assembly |> Some
+////    with
+////      | :? System.IO.FileNotFoundException -> printfn "%s was not found" assembly; None
+////      // Indicates a C# assembly, someday I'll handle this
+////      | :? System.ArgumentException -> printfn "%s is not an F# assembly" assembly; None 
+//  updateReferences (Seq.choose id (Seq.map optionAssembly assemblies))
+//do addReferences []
+
+
 // Public interface
 // (other functions aren't private yet because it's so inconvenient;
 // probably I should just move everything else to another module.)
