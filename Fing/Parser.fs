@@ -2,12 +2,14 @@
 // Licence: New BSD. See accompanying documentation.
 module Parser
 
-//open Microsoft.FSharp.Metadata
 open System.Text.RegularExpressions
 open Util
 open Types
-open FParsec.Primitives
-open FParsec.CharParsers
+#if INTERACTIVE
+#r "../packages/FParsec.1.0.1/lib/net40-client/FParsec.dll"
+#r "../packages/FParsec.1.0.1/lib/net40-client/FParsecCS.dll"
+#endif
+open FParsec
 
 // Brian's explanation:
 //   http://lorgonblog.spaces.live.com/blog/cns!701679AD17B6D310!1077.entry
@@ -16,88 +18,95 @@ open FParsec.CharParsers
 // Spec (Beta 2 from 2009/11, not RC)
 //   http://research.microsoft.com/en-us/um/cambridge/projects/fsharp/manual/spec.html#_Toc245030785
 //////////////
-let identifierChar c = 
-    match c with
-    | '.' | '`' | '_' -> true
-    | _ when ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') 
-             || ('0' <= c && c <= '9') -> true
-    | _ -> false
+//let identifierChar c = 
+//    match c with
+//    | '.' | '`' | '_' -> true
+//    | _ when ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') 
+//             || ('0' <= c && c <= '9') -> true
+//    | _ -> false
+//
+//let rec identifierLoop (st : CharStream<'u>) (acc : char list) = 
+//    match st.Read() with
+//    | c when identifierChar c -> identifierLoop st.Next (c :: acc)
+//    | _ -> (new string(List.toArray <| List.rev acc), st)
 
-let rec identifierLoop (st : FParsec.State<'u>) (acc : char list) = 
-    match st.Iter.Read() with
-    | c when identifierChar c -> identifierLoop st.Next (c :: acc)
-    | _ -> (new string(List.toArray <| List.rev acc), st)
+let identifierLoop = many1Chars (asciiLetter <|> digit <|> anyOf ['.';'`';'_']) 
 
-let rec skipSpace (st : FParsec.State<'u>) = 
-    match st.Iter.Read() with // maybe need to check for EOS here ?
-    | ' ' | '\t' -> skipSpace st.Next
-    | _ -> st
+let skipSpace = spaces
 
-let tokeniser f expected : Parser<string, 'u> = 
-    fun state -> 
-        let st = skipSpace state
-        let c = st.Iter.Read()
-        match c with
-        | FParsec.CharParsers.EOS -> 
-            Reply(Error, FParsec.Error.expectedError "end of file", state)
-        | c when identifierChar c -> 
-            let (t, stAfter) = identifierLoop st.Next [ c ]
-            if f t then Reply(t, stAfter)
-            else 
-                Reply
-                    (Error, 
-                     
-                     FParsec.Error.backtrackError stAfter 
-                         (FParsec.Error.expectedError expected), state)
-        // Reply(Error, FParsec.Error.expectedError expected, st) // or stAfter??? or state?
-        | '-' -> 
-            let stPeek = st.Next
-            match stPeek.Iter.Read() with
-            | '>' -> 
-                if f "->" then Reply("->", stPeek.Next)
-                else 
-                    Reply
-                        (Error, 
-                         
-                         FParsec.Error.backtrackError stPeek 
-                             (FParsec.Error.expectedError expected), state)
-            | _ -> 
-                Reply
-                    (Error, 
-                     
-                     FParsec.Error.expectedError 
-                         "Dash only allowed in -> digraph", state)
-        | ':' -> 
-            let stPeek = st.Next
-            match stPeek.Iter.Read() with
-            | '>' -> 
-                if f ":>" then Reply(":>", stPeek.Next)
-                else 
-                    Reply
-                        (Error, 
-                         
-                         FParsec.Error.backtrackError stPeek 
-                             (FParsec.Error.expectedError expected), state)
-            | _ -> 
-                if f ":" then Reply(":", stPeek)
-                else 
-                    Reply
-                        (Error, 
-                         
-                         FParsec.Error.backtrackError stPeek 
-                             (FParsec.Error.expectedError expected), state)
-        | '*' | '<' | '>' | '(' | ')' | '[' | ']' | ',' | '\'' | '^' | '#' | '?' -> 
-            if f (string c) then Reply(string c, st.Next)
-            else 
-                Reply
-                    (Error, 
-                     
-                     FParsec.Error.backtrackError st 
-                         (FParsec.Error.expectedError expected), state)
-        | _ -> 
-            Reply
-                (Error, FParsec.Error.expectedError "Identifier or punctuation", 
-                 state)
+let tokeniser f error =
+    choice [ identifierLoop
+             pstring "->"
+             pstring ":>"
+             anyOf [':'; '*';'<'; '>'; '(';')'; '[' ; ']' ; ',' ; '\'' ; '^' ; '#' ; '?'] |>> string
+           ]
+    .>> spaces
+    >>= (fun s -> if f s then preturn s else fail error)
+//run (tokeniser ((=) "seq") "errorrr") "seq<'a> -> 'b"
+//    fun state -> 
+//        let st = skipSpace state
+//        let c = st.Iter.Read()
+//        match c with
+//        | FParsec.CharParsers.EOS -> 
+//            Reply(Error, FParsec.Error.expectedError "end of file", state)
+//        | c when identifierChar c -> 
+//            let (t, stAfter) = identifierLoop st.Next [ c ]
+//            if f t then Reply(t, stAfter)
+//            else 
+//                Reply
+//                    (Error, 
+//                     
+//                     FParsec.Error.backtrackError stAfter 
+//                         (FParsec.Error.expectedError expected), state)
+//        // Reply(Error, FParsec.Error.expectedError expected, st) // or stAfter??? or state?
+//        | '-' -> 
+//            let stPeek = st.Next
+//            match stPeek.Iter.Read() with
+//            | '>' -> 
+//                if f "->" then Reply("->", stPeek.Next)
+//                else 
+//                    Reply
+//                        (Error, 
+//                         
+//                         FParsec.Error.backtrackError stPeek 
+//                             (FParsec.Error.expectedError expected), state)
+//            | _ -> 
+//                Reply
+//                    (Error, 
+//                     
+//                     FParsec.Error.expectedError 
+//                         "Dash only allowed in -> digraph", state)
+//        | ':' -> 
+//            let stPeek = st.Next
+//            match stPeek.Iter.Read() with
+//            | '>' -> 
+//                if f ":>" then Reply(":>", stPeek.Next)
+//                else 
+//                    Reply
+//                        (Error, 
+//                         
+//                         FParsec.Error.backtrackError stPeek 
+//                             (FParsec.Error.expectedError expected), state)
+//            | _ -> 
+//                if f ":" then Reply(":", stPeek)
+//                else 
+//                    Reply
+//                        (Error, 
+//                         
+//                         FParsec.Error.backtrackError stPeek 
+//                             (FParsec.Error.expectedError expected), state)
+//        | '*' | '<' | '>' | '(' | ')' | '[' | ']' | ',' | '\'' | '^' | '#' | '?' -> 
+//            if f (string c) then Reply(string c, st.Next)
+//            else 
+//                Reply
+//                    (Error, 
+//                     
+//                     FParsec.Error.backtrackError st 
+//                         (FParsec.Error.expectedError expected), state)
+//        | _ -> 
+//            Reply
+//                (Error, FParsec.Error.expectedError "Identifier or punctuation", 
+//                 state)
 
 let tok s = tokeniser ((=) s) s
 let notTok ts = tokeniser (fun t -> not <| List.exists ((=) t) ts) "Non-keyword"

@@ -83,34 +83,4 @@ let parse (args : string []) =
         | Bare arg -> ""
         | Parameter(name, arg) -> name) (bare (Array.toList args))
     |> separateBares
-(*let args' = Array.toList args
-  let parameters = new StringDictionary()
-  let mutable parameter = None : string option
-  // let parts = [] : string list
-  for txt in args' do
-    let parts = splitter.Split(txt, 3)
-    match parts.Length with
-    | 1 -> match parameter with
-           | Some p -> if not <| parameters.ContainsKey p then
-                         parameters.Add(p, unquote parts.[0])
-                       parameter <- None
-           | None -> failwith "No parameter waiting for value."
-    | 2 -> match parameter with
-           | Some p -> if not <| parameters.ContainsKey p then
-                         parameters.Add(p, "true")
-           | None -> ()
-           parameter <- Some parts.[1]
-    | 3 -> match parameter with
-           | Some p -> if not <| parameters.ContainsKey p then
-                         parameters.Add(p, "true")
-           | None -> ()
-           parameter <- Some parts.[1]
-           if parameter.IsSome && not <| parameters.ContainsKey parameter.Value then
-             parameters.Add(parameter.Value, unquote parts.[2])
-           parameter <- None
-    | _ -> failwith "Catastrophic failure in Regex.Split(string, int)"
-  match parameter with
-  | Some p -> if not <| parameters.ContainsKey parameter.Value then
-                parameters.Add(parameter.Value, "true")
-  | None -> ()
-  parameters*)
+
