@@ -4,11 +4,14 @@
 #I @"..\packages\FSharp.Compiler.Service.0.0.58\lib\net45"
 #r "FSharp.Compiler.Service"
 #endif
+
 module Fing
+
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Types
 open Util
 open Search
+open System.IO
 
 type Result = {
   ent : FSharpEntity
@@ -16,8 +19,13 @@ type Result = {
   typ : Typ
 }
 
-
 let loadAssemblies refs =
+  let base1 = System.IO.Path.GetTempFileName()
+  let fileName1 = Path.ChangeExtension(base1, ".fs")
+  let fileSource1 = """
+module Blah
+    """
+  File.WriteAllText(fileName1, fileSource1)
   let checker = InteractiveChecker.Create()
   let projectOptions = 
       checker.GetProjectOptionsFromCommandLineArgs
@@ -32,9 +40,7 @@ let loadAssemblies refs =
              yield "--fullpaths" 
              yield "--flaterrors" 
              yield "--target:library" 
-             yield @"C:\Users\Kurt\Projects\fing\Fing\Util.fs"
-             //yield Inputs.fileName1
-             //yield Inputs.fileName2
+             yield fileName1
              let references = 
                [ @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\mscorlib.dll" 
                  @"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.dll" 
@@ -49,10 +55,7 @@ let loadAssemblies refs =
  
   let wholeProjectResults = checker.ParseAndCheckProject(projectOptions) |> Async.RunSynchronously
   let referenced = wholeProjectResults.ProjectContext.GetReferencedAssemblies()
-  let fslib = referenced |> List.find (fun r -> r.SimpleName = "FSharp.Core")
   referenced
-//  let refsResult = referenced |> List.filter (fun r -> refs |> List.exists(fun name -> name = r.SimpleName))
-//  fslib, refsResult
 
 let entite { ent = e } = e
 let membre { mem = m } = m
@@ -73,17 +76,7 @@ let private updateReferences (refs : seq<FSharpAssembly>) =
 let addReferences news =
   assemblies <- assemblies  |>Set.union<| set news
   assemblies |> loadAssemblies |> updateReferences
-//let addReferences news =
-//  assemblies <- assemblies |>Set.union<| set news
-//  let optionAssembly assembly = None
-////    try
-////      FSharpAssembly.FromFile assembly |> Some
-////    with
-////      | :? System.IO.FileNotFoundException -> printfn "%s was not found" assembly; None
-////      // Indicates a C# assembly, someday I'll handle this
-////      | :? System.ArgumentException -> printfn "%s is not an F# assembly" assembly; None 
-//  updateReferences (Seq.choose id (Seq.map optionAssembly assemblies))
-//do addReferences []
+
 
 
 // Public interface

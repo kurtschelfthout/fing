@@ -2,16 +2,16 @@
 // Licence: New BSD. See accompanying documentation.
 module Main
 
-
 [<EntryPoint>]
-let main args =
-  let args,argmap = Opt.parse args
-  let getrefs s = Seq.choose id (Opt.mapGet s argmap Seq.empty)
-  let references = (getrefs "r" |>Seq.append<| getrefs "reference")
-  Fing.addReferences references
-  match Seq.toList args with
-  | [ t ] -> Fing.textSearch t
-  | _ -> printfn @"Fing is F# API Search.
+let main args = 
+    let args, argmap = Opt.parse args
+    let getrefs s = Seq.choose id (Opt.mapGet s argmap Seq.empty)
+    let references = (getrefs "r"
+                      |> Seq.append <| getrefs "reference")
+    Fing.addReferences references
+    match Seq.toList args with
+    | [ t ] -> Fing.textSearch t
+    | _ -> printfn @"Fing is F# API Search.
 
 Usage:
 
@@ -41,5 +41,6 @@ For F# type syntax, refer to
 or, for an introduction, see 
   lorgonblog.spaces.live.com/Blog/cns!701679AD17B6D310!1077.entry
    "
-  if System.Diagnostics.Debugger.IsAttached then System.Console.ReadKey() |> ignore
-  0
+    if System.Diagnostics.Debugger.IsAttached then 
+        System.Console.ReadKey() |> ignore
+    0
