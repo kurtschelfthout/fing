@@ -30,9 +30,7 @@ open FParsec
 //    | c when identifierChar c -> identifierLoop st.Next (c :: acc)
 //    | _ -> (new string(List.toArray <| List.rev acc), st)
 
-let identifierLoop = many1Chars (asciiLetter <|> digit <|> anyOf ['.';'`';'_']) 
-
-let skipSpace = spaces
+let identifierLoop : Parser<_,unit> = many1Chars (asciiLetter <|> digit <|> anyOf ['.';'`';'_']) 
 
 let tokeniser f error =
     choice [ identifierLoop
@@ -42,73 +40,12 @@ let tokeniser f error =
            ]
     .>> spaces
     >>= (fun s -> if f s then preturn s else fail error)
-//run (tokeniser ((=) "seq") "errorrr") "seq<'a> -> 'b"
-//    fun state -> 
-//        let st = skipSpace state
-//        let c = st.Iter.Read()
-//        match c with
-//        | FParsec.CharParsers.EOS -> 
-//            Reply(Error, FParsec.Error.expectedError "end of file", state)
-//        | c when identifierChar c -> 
-//            let (t, stAfter) = identifierLoop st.Next [ c ]
-//            if f t then Reply(t, stAfter)
-//            else 
-//                Reply
-//                    (Error, 
-//                     
-//                     FParsec.Error.backtrackError stAfter 
-//                         (FParsec.Error.expectedError expected), state)
-//        // Reply(Error, FParsec.Error.expectedError expected, st) // or stAfter??? or state?
-//        | '-' -> 
-//            let stPeek = st.Next
-//            match stPeek.Iter.Read() with
-//            | '>' -> 
-//                if f "->" then Reply("->", stPeek.Next)
-//                else 
-//                    Reply
-//                        (Error, 
-//                         
-//                         FParsec.Error.backtrackError stPeek 
-//                             (FParsec.Error.expectedError expected), state)
-//            | _ -> 
-//                Reply
-//                    (Error, 
-//                     
-//                     FParsec.Error.expectedError 
-//                         "Dash only allowed in -> digraph", state)
-//        | ':' -> 
-//            let stPeek = st.Next
-//            match stPeek.Iter.Read() with
-//            | '>' -> 
-//                if f ":>" then Reply(":>", stPeek.Next)
-//                else 
-//                    Reply
-//                        (Error, 
-//                         
-//                         FParsec.Error.backtrackError stPeek 
-//                             (FParsec.Error.expectedError expected), state)
-//            | _ -> 
-//                if f ":" then Reply(":", stPeek)
-//                else 
-//                    Reply
-//                        (Error, 
-//                         
-//                         FParsec.Error.backtrackError stPeek 
-//                             (FParsec.Error.expectedError expected), state)
-//        | '*' | '<' | '>' | '(' | ')' | '[' | ']' | ',' | '\'' | '^' | '#' | '?' -> 
-//            if f (string c) then Reply(string c, st.Next)
-//            else 
-//                Reply
-//                    (Error, 
-//                     
-//                     FParsec.Error.backtrackError st 
-//                         (FParsec.Error.expectedError expected), state)
-//        | _ -> 
-//            Reply
-//                (Error, FParsec.Error.expectedError "Identifier or punctuation", 
-//                 state)
+    |> attempt
 
-let tok s = tokeniser ((=) s) s
+
+
+
+let tok s = tokeniser ((=) s) (sprintf "tok: expecting %s" s)
 let notTok ts = tokeniser (fun t -> not <| List.exists ((=) t) ts) "Non-keyword"
 
 /////////////
@@ -126,8 +63,8 @@ let devar t =
 
 let nestTypes = List.fold (|>)
 ///////// start parsing! /////////
-let (typeP, typeref) = createParserForwardedToRef()
-let (constraintP, conref) = createParserForwardedToRef()
+let (typeP:Parser<Typ,unit>, typeref)  = createParserForwardedToRef()
+let (constraintP:Parser<Typ->Typ,unit>, conref) = createParserForwardedToRef()
 let identP = 
     notTok 
         [ "lazy"; "with"; "when"; "if"; "else"; "do"; "new"; //"get"; "set"
@@ -296,7 +233,7 @@ do conref := typevarChoiceP <|> singleTypevarP
               }
 
 (* parse a string into a type *)
-let parse (s : string) = 
-    match FParsec.CharParsers.run (arrowP .>> eof) s with
+let parse (input : string) = 
+    match run (arrowP .>> eof) input with
     | Success(t, (), _) -> t
     | Failure(s, err, ()) -> failwith s // or maybe failwith err? I'm not sure

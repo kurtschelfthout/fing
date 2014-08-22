@@ -116,12 +116,14 @@ type public TypeTester() =
 
 [<TestFixture>]
 type public ParseTester() =
+
   [<Test>]
-  member public this.ParseTest() = 
+  member this.ParseTest() = 
     Assert.AreEqual(List.length passes, List.length passresults)
     testall (List.zip passresults (List.map Parser.parse passes))
     List.zip passresults (List.map Parser.parse passes) 
     |> List.iteri (fun i (exp,act) -> Assert.AreEqual(exp,act,sprintf "%d. %A" i act))
+
 type public ParsedTypeTester() =
   [<Test>]
   member this.TestDealias() =
