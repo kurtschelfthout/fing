@@ -5,10 +5,6 @@ module Parser
 open System.Text.RegularExpressions
 open Util
 open Types
-#if INTERACTIVE
-#r "../packages/FParsec.1.0.1/lib/net40-client/FParsec.dll"
-#r "../packages/FParsec.1.0.1/lib/net40-client/FParsecCS.dll"
-#endif
 open FParsec
 
 // Brian's explanation:

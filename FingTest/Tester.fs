@@ -9,17 +9,21 @@ open System.Text.RegularExpressions
 
 //// testing utils ////
 // these are surprisingly easy to write and understand in their non-general tuple forms
-let first f (a,b) = (f a, b)
-let second f (a,b) = (a, f b)
+let mapFst f (a,b) = (f a, b)
+let mapSnd f (a,b) = (a, f b)
+
 let safezip l1 l2 = 
   let len = min (List.length l1) (List.length l2)
   Seq.zip (Seq.take len l1) (Seq.take len l2)
+
 let sprints l = Seq.map (sprintf "%A") l |> String.concat ","
+
 let testall (results : seq<'a*'a>) =
   Seq.iteri (fun i (exp,act) ->
                Assert.AreEqual(exp :> obj,act :> obj, sprintf "%d. %A" i act))
             results
-let testWith f pairs = List.map (second f) pairs |> testall
+
+let testWith f pairs = List.map (mapSnd f) pairs |> testall
 
 //// correctness ////
 // NOTE: Should this be part of production code instead of testing?
@@ -27,17 +31,15 @@ let testWith f pairs = List.map (second f) pairs |> testall
 // bound by a containing generic type
 // there are probably lots of other errors like this one (basically anything in a constraint)
 let rec unboundVars env : Typ -> option<Set<Typar>> = function
-  | Arrow ts -> try
-                  Some <| Seq.pick (unboundVars env) ts // this has to catch KeyNotFoundException?? arghh
-                with | :? System.Collections.Generic.KeyNotFoundException -> None
+  | Arrow ts -> Seq.tryPick (unboundVars env) ts
   | Var (Choice vars) -> 
-    match Set.difference (Set.ofList vars) env with
-    | vs when vs = Set.empty -> None
-    | unbounds -> Some unbounds
+        match Set.difference (Set.ofList vars) env with
+            | vs when vs = Set.empty -> None
+            | unbounds -> Some unbounds
   | _ -> None
 
 [<TestFixture>] 
-type public Tester() =
+type Tester() =
 //  let core = Microsoft.FSharp.Metadata.FSharpAssembly.FSharpLibrary
 //  // let parsec = Microsoft.FSharp.Metadata.FSharpAssembly.FromFile "Y:/src/Fing/Fing/bin/Debug/FParsec.dll"
 //  let ts = seq {
@@ -81,12 +83,14 @@ type public Tester() =
 //                                      sprintf "%d. %s: %s" i t.mem.DisplayName (format t'.typ)))
 
 [<TestFixture>]
-type public TypeTester() =
+type TypeTester() =
+
   [<Test>]
   member this.TestFormat() =
     safezip (List.map Parser.parse passes) 
             (List.map (Types.format >> Parser.parse) passresults )
     |> testall
+
   [<Test>]
   member this.TestIndex() =
     let usedIndices t =
@@ -102,10 +106,11 @@ type public TypeTester() =
       | Var v -> Some (Var (Map.find v map))
       | _ -> None
       Types.map subst' id t
-    safezip (List.map (usedIndices >> second randomise >> subst >> Types.index) 
+    safezip (List.map (usedIndices >> mapSnd randomise >> subst >> Types.index) 
                       passresults)
             passresults
     |> testall
+
   [<Test>]
   member this.TestRevMap() =
     testWith Types.revMap [
@@ -115,7 +120,7 @@ type public TypeTester() =
     ]
 
 [<TestFixture>]
-type public ParseTester() =
+type ParseTester() =
 
   [<Test>]
   member this.ParseTest() = 
@@ -124,12 +129,3 @@ type public ParseTester() =
     List.zip passresults (List.map Parser.parse passes) 
     |> List.iteri (fun i (exp,act) -> Assert.AreEqual(exp,act,sprintf "%d. %A" i act))
 
-type public ParsedTypeTester() =
-  [<Test>]
-  member this.TestDealias() =
-    // for all pass in passes, 
-    //  for all alias,t in Seq.zip (Parser.parse pass |> usedIds)
-    //                             (Parser.parse pass |> ParsedTypes.dealias |> usedIds),
-    //    if Types.aliases.ContainsKey alias then Types.aliases.[alias] = t else alias = t
-    // NOTE: usedIds must be written x_x
-    ()

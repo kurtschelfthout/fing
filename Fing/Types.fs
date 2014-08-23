@@ -229,14 +229,3 @@ let rec index t =
     
     let lookup v = Map.find v indices.Value
     map updateVar lookup t
-
-// old kvb code. I think some of the code that uses this is still active,
-// so it won't compile unless this is left in
-type Tag<'ty> = 
-    | Toople
-    | Arr
-    | Ground of 'ty
-
-type Ty<'ty, 'a> = 
-    | Param of 'a
-    | Complex of Tag<'ty> * Ty<'ty, 'a> list

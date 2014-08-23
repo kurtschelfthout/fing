@@ -1,22 +1,20 @@
-﻿// This file is a script that can be executed with the F# Interactive.  
-// It can be used to explore and test the library project.
-// Note that script files will not be part of the project build.
+﻿
+#I "../packages/FParsec.1.0.1/lib/net40-client/"
+#I "../packages/FSharp.Compiler.Service.0.0.59/lib/net45"
+#I "../Fing/bin/Debug/"
 
-#r @"C:/Program Files (x86)/FSharpPowerPack-2.0.0.0/bin/FSharp.PowerPack.Metadata.dll"
-#I @"C:/src/Fing/Fing/Fing/bin/Debug/"
-//#r @"Y:/src/Fing/fparsec/main/Build/VS9/bin/Debug/FParsec.dll"
-#r @"FParsec.dll"
-#r @"FParsecCS.dll"
-//#r "Y:/src/Fing/fparsec/main/Build/VS9/bin/Debug/FParsecCS.dll"
-#load @"C:\src\Fing\Fing\Fing\Util.fs"
-#load @"C:\src\Fing\Fing\Fing\Types.fs"
-#load @"C:\src\Fing\Fing\Fing\ParsedTypes.fs"
-#load @"C:\src\Fing\Fing\Fing\FSharpTypes.fs"
-#load @"C:\src\Fing\Fing\Fing\CSharpTypes.fs"
-#load @"C:\src\Fing\Fing\Fing\Parser.fs"
-#load @"C:\src\Fing\Fing\Fing\Search.fs"
-#load @"C:\src\Fing\Fing\Fing\Fing.fs"
-#load @"C:\src\Fing\Fing\FingTest\TestCases.fs"
+#r "FParsecCS"
+#r "FParsec"
+#r "FSharp.Compiler.Service"
+
+#load @"..\Fing\Util.fs"
+#load @"..\Fing\Types.fs"
+#load @"..\Fing\ParsedTypes.fs"
+#load @"..\Fing\FSharpTypes.fs"
+#load @"..\Fing\Parser.fs"
+#load @"..\Fing\Search.fs"
+#load @"..\Fing\Fing.fs"
+#load @"TestCases.fs"
 // #load "Tester.fs"
 open Types
 open Util

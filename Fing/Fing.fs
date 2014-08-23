@@ -1,9 +1,5 @@
 ﻿// Copyright (c) 2010, Nathan Sanders
 // Licence: New BSD. See accompanying documentation.
-#if INTERACTIVE
-#I @"..\packages\FSharp.Compiler.Service.0.0.58\lib\net45"
-#r "FSharp.Compiler.Service"
-#endif
 
 module Fing
 
