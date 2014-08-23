@@ -8,8 +8,7 @@ let chompchomp (s : string) =
 
 // TODO: There are plenty of utilities scattered around the project already.
 // Most should probably migrate here.
-let cr f x y = f (x, y)
-let constant a b = a
+let curry f x y = f (x, y)
 
 module Seq = 
     let butLast l = 

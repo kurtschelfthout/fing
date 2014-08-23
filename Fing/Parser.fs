@@ -69,7 +69,7 @@ let identP =
 let tupleP = sepBy1 typeP (tok "*") |>> passthrough Tuple
 let arrowP = sepBy1 tupleP (tok "->") |>> passthrough Arrow
 let postfixP id = 
-    between (tok "<") (tok ">") (sepBy arrowP (tok ",")) |>> (cr Generic id)
+    between (tok "<") (tok ">") (sepBy arrowP (tok ",")) |>> (curry Generic id)
 let longidentP = identP >>= (fun id -> (postfixP (Id id)) <|>% Id id)
 
 let typevarP = 
@@ -79,7 +79,7 @@ let typevarP =
     choice [ anon; normal; structural ]
 
 let arrayP = parse { let! dims = between (tok "[") (tok "]") (many (tok ","))
-                     return cr Array (1 + List.length dims) }
+                     return curry Array (1 + List.length dims) }
 
 let traitP var = 
     let typevarConstraintsP = tok "when" >>. sepBy1 constraintP (tok "and")
@@ -158,7 +158,7 @@ let traitP var =
                 | None -> t
                 | Some(con) -> Constraint(TyparConstraint con, t)
             
-            return cr Constraint (Sig(var, t', sign, property))
+            return curry Constraint (Sig(var, t', sign, property))
         }
     
     between (tok "(") (tok ")") (memberSigP var)
@@ -171,30 +171,30 @@ let singleTypevarP =
              >>. tok "'" >>. tok "T" >>. tok ")" >>. preturn())
     let subtypeP var = 
         tok ":>" >>. parse { let! t = arrowP
-                             return cr Constraint (Subtype(var, t)) }
+                             return curry Constraint (Subtype(var, t)) }
     let enumP var = tok "enum" >>. parse { let! t = between (tok "<") (tok ">") 
                                                         arrowP
-                                           return cr Constraint (Enum(var, t)) }
+                                           return curry Constraint (Enum(var, t)) }
     let delegateP var = 
         tok "delegate" 
         >>. between (tok "<") (tok ">") 
                 (parse { let! leftT = arrowP
                          let! _ = tok ","
                          let! rightT = arrowP
-                         return cr Constraint (Delegate(var, leftT, rightT)) })
+                         return curry Constraint (Delegate(var, leftT, rightT)) })
     
     let conP var = 
-        tok ":" >>. choice [ tok "null" >>. preturn (cr Constraint (Null var))
+        tok ":" >>. choice [ tok "null" >>. preturn (curry Constraint (Null var))
                              
                              tok "struct" 
-                             >>. preturn (cr Constraint (Struct var))
+                             >>. preturn (curry Constraint (Struct var))
                              
                              constructorP 
                              >>. preturn 
-                                     (cr Constraint (DefaultConstructor var))
+                                     (curry Constraint (DefaultConstructor var))
                              
                              tok "not" >>. tok "struct" 
-                             >>. preturn (cr Constraint (NotStruct var))
+                             >>. preturn (curry Constraint (NotStruct var))
                              enumP var
                              delegateP var
                              traitP var ]
@@ -208,7 +208,7 @@ let typevarChoiceP =
         let! tmp = traitP Anonymous
         match tmp (Id "DUMMY") with
         | Constraint(Sig(_, id, mem, prop), _) -> 
-            return cr Constraint (Sig(Choice typars', id, mem, prop))
+            return curry Constraint (Sig(Choice typars', id, mem, prop))
         | _ -> failwith "Holy crap this program is crap"
     }
 

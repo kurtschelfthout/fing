@@ -9,19 +9,17 @@ open System.Text.RegularExpressions
 
 //// testing utils ////
 // these are surprisingly easy to write and understand in their non-general tuple forms
-let mapFst f (a,b) = (f a, b)
+
 let mapSnd f (a,b) = (a, f b)
 
 let safezip l1 l2 = 
   let len = min (List.length l1) (List.length l2)
   Seq.zip (Seq.take len l1) (Seq.take len l2)
 
-let sprints l = Seq.map (sprintf "%A") l |> String.concat ","
+let testall results =
+  results
+  |> Seq.iteri (fun i (exp,act) -> Assert.AreEqual(exp :> obj,act :> obj, sprintf "%d. %A" i act))
 
-let testall (results : seq<'a*'a>) =
-  Seq.iteri (fun i (exp,act) ->
-               Assert.AreEqual(exp :> obj,act :> obj, sprintf "%d. %A" i act))
-            results
 
 let testWith f pairs = List.map (mapSnd f) pairs |> testall
 
@@ -30,25 +28,34 @@ let testWith f pairs = List.map (mapSnd f) pairs |> testall
 // it is an error to have a Choice [typar1;typar2;typar3] without typars 1 2 and 3 being
 // bound by a containing generic type
 // there are probably lots of other errors like this one (basically anything in a constraint)
-let rec unboundVars env : Typ -> option<Set<Typar>> = function
-  | Arrow ts -> Seq.tryPick (unboundVars env) ts
-  | Var (Choice vars) -> 
-        match Set.difference (Set.ofList vars) env with
-            | vs when vs = Set.empty -> None
-            | unbounds -> Some unbounds
-  | _ -> None
+//let rec unboundVars env : Typ -> option<Set<Typar>> = function
+//  | Arrow ts -> Seq.tryPick (unboundVars env) ts
+//  | Var (Choice vars) -> 
+//        match Set.difference (Set.ofList vars) env with
+//            | vs when vs = Set.empty -> None
+//            | unbounds -> Some unbounds
+//  | _ -> None
 
 [<TestFixture>] 
 type Tester() =
-//  let core = Microsoft.FSharp.Metadata.FSharpAssembly.FSharpLibrary
-//  // let parsec = Microsoft.FSharp.Metadata.FSharpAssembly.FromFile "Y:/src/Fing/Fing/bin/Debug/FParsec.dll"
-//  let ts = seq {
-//    for e in core.Entities do
-//    for m in e.MembersOrValues do
-//    yield {Fing.ent=e; Fing.mem=m; Fing.typ=FSharpTypes.cvt m.Type |> Types.index |> FSharpTypes.debinarize} 
-//  }
-  let actuallyFound expected (t : Fing.Result) =
-    Fing.typeFind (format t.typ) |> Seq.tryFind ((=) expected)
+  let core = loadAssemblies [] |> Seq.find (fun asm -> asm.SimpleName.Contains("FSharp.Core"))
+  // let parsec = Microsoft.FSharp.Metadata.FSharpAssembly.FromFile "Y:/src/Fing/Fing/bin/Debug/FParsec.dll"
+  let ts =
+    core.Contents.Entities
+    |> Seq.map (fun e -> e.MembersFunctionsAndValues 
+                         |> Seq.map (fun m -> {Fing.ent=e
+                                               Fing.mem=m
+                                               Fing.typ=FSharpTypes.cvt m.FullType |> Types.index |> FSharpTypes.debinarize
+                                               }))
+    |> Seq.concat
+    |> Seq.toArray
+  let actuallyFound expected (t : Result) =
+    let toFind = format t.typ
+    let exp = format expected.typ
+    let found = Fing.typeFind toFind |> Seq.toArray
+
+    found |> Seq.tryFind ((=) expected)
+
   let arrayShuffle (ara : 'a[]) =
     let rnd = System.Random()
     for i in [ara.Length .. -1 .. 1] do
@@ -57,14 +64,13 @@ type Tester() =
       ara.[j] <- ara.[i-1]
       ara.[i-1] <- tmp
     ara
-//  [<Test>]
-//  member this.UsedVarTest() =
-//    safezip usedVarResults (List.map Unify.usedVars passresults) |> testall
+
   /// Make sure that every function in FSharp.Core can be found if you at least search
   /// for the exact type obtained from the FSharpType itself.
-//  [<Test>]
-//  member this.SmokeTest() =
-//    Seq.zip (Seq.map Some ts) (Seq.map2 actuallyFound ts ts) |> testall
+  [<Test>]
+  member this.SmokeTest() =
+    Fing.addReferences [] //inits the type list
+    Seq.zip (Seq.map Some ts) (Seq.map2 actuallyFound ts ts) |> testall
 
 //  [<Test>]
 //  member this.ShuffleSmokeTest() =

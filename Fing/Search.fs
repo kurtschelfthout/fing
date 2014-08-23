@@ -65,9 +65,9 @@ let rec variants : Typ -> Typ list =
         [ for t in variants t do
               for args in List.map variants args |> listSequence do
                   yield Generic(t, args) ]
-    | Array(n, t) -> List.map (cr Array n) (variants t)
+    | Array(n, t) -> List.map (curry Array n) (variants t)
     // constraint variants go here (maybe)
-    | Constraint(c, t) -> List.map (cr Constraint c) (variants t)
+    | Constraint(c, t) -> List.map (curry Constraint c) (variants t)
 
 let rec matches user library = 
     List.exists (fun t -> index t = library) (variants user)
