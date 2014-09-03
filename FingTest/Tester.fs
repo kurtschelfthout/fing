@@ -18,6 +18,7 @@ let safezip l1 l2 =
 
 let testall results =
   results
+  //|> Seq.take 20
   |> Seq.iteri (fun i (exp,act) -> Assert.AreEqual(exp :> obj,act :> obj, sprintf "%d. %A" i act))
 
 
@@ -88,17 +89,17 @@ type Tester() =
 //                                      actuallyFound t t',
 //                                      sprintf "%d. %s: %s" i t.mem.DisplayName (format t'.typ)))
 
-[<TestFixture>]
-type TypeTester() =
+
+module TypeTester =
 
   [<Test>]
-  member this.TestFormat() =
+  let testFormat() =
     safezip (List.map Parser.parse passes) 
             (List.map (Types.format >> Parser.parse) passresults )
     |> testall
 
   [<Test>]
-  member this.TestIndex() =
+  let testIndex() =
     let usedIndices t =
       let usedIndicesTyp = function
       | Var v -> Some (Set.singleton v)
@@ -118,18 +119,18 @@ type TypeTester() =
     |> testall
 
   [<Test>]
-  member this.TestRevMap() =
+  let testRevMap() =
     testWith Types.revMap [
       Map.empty, Map.empty
       Map.ofList [("a","b")], Map.ofList [("b","a")]
       Map.ofList [("a","b");("a","c")], Map.ofList [("c", "a")]
     ]
 
-[<TestFixture>]
-type ParseTester() =
+
+module ParseTester =
 
   [<Test>]
-  member this.ParseTest() = 
+  let parseTest() = 
     Assert.AreEqual(List.length passes, List.length passresults)
     testall (List.zip passresults (List.map Parser.parse passes))
     List.zip passresults (List.map Parser.parse passes) 

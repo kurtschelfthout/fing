@@ -28,13 +28,16 @@ open FParsec
 
 let identifierLoop : Parser<_,unit> = many1Chars (asciiLetter <|> digit <|> anyOf ['.';'`';'_']) 
 
-let tokeniser f error =
+let token =     
     choice [ identifierLoop
              pstring "->"
              pstring ":>"
              anyOf [':'; '*';'<'; '>'; '(';')'; '[' ; ']' ; ',' ; '\'' ; '^' ; '#' ; '?'] |>> string
            ]
     .>> spaces
+
+let tokeniser f error =
+    token
     >>= (fun s -> if f s then preturn s else fail error)
     |> attempt
 
