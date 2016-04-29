@@ -3,6 +3,7 @@ NUGET
   specs:
     FParsec (1.0.2)
     FSharp.Compiler.Service (3.0)
+    FSharp.Core (4.0.0.1) - redirects: force
 
 GROUP Build
 NUGET

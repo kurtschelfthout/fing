@@ -1,6 +1,7 @@
 source https://ci.appveyor.com/nuget/fscheck
 source https://www.nuget.org/api/v2/
 
+nuget FSharp.Core redirects: force
 nuget FParsec
 nuget FSharp.Compiler.Service
 
