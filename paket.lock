@@ -1,0 +1,6 @@
+NUGET
+  remote: https://www.nuget.org/api/v2
+  specs:
+    FParsec (1.0.1) - framework: >= net451
+    FSharp.Compiler.Service (0.0.59) - framework: >= net451
+    NUnit (2.6.3) - framework: >= net35
