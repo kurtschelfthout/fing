@@ -10,9 +10,9 @@ open Search
 open System.IO
 
 type Result = {
-  ent : FSharpEntity
-  mem : FSharpMemberFunctionOrValue
-  typ : Typ
+  Entity : FSharpEntity
+  Member : FSharpMemberOrFunctionOrValue
+  Typ : Typ
 }
 
 let loadAssemblies refs =
@@ -22,7 +22,7 @@ let loadAssemblies refs =
 module Blah
     """
   File.WriteAllText(fileName1, fileSource1)
-  let checker = InteractiveChecker.Create()
+  let checker = FSharpChecker.Create()
   let projectOptions = 
       checker.GetProjectOptionsFromCommandLineArgs
          ("Fing.fsproj",
@@ -53,10 +53,10 @@ module Blah
   let referenced = wholeProjectResults.ProjectContext.GetReferencedAssemblies()
   referenced
 
-let entite { ent = e } = e
-let membre { mem = m } = m
-let tipe { typ = t } = t
-let private formatResult { ent = e; mem = m; typ = t } = 
+let entite { Entity = e } = e
+let membre { Member = m } = m
+let tipe { Typ = t } = t
+let private formatResult { Entity = e; Member = m; Typ = t } = 
   sprintf "%s.%s\t\t%s" e.DisplayName m.DisplayName (format t)
 // TODO: Cache this on disk or something
 let mutable private assemblies : Set<string> = Set.empty
@@ -67,7 +67,7 @@ let private updateReferences (refs : seq<FSharpAssembly>) =
     [ for ref in refs do
         for e in ref.Contents.Entities do
           for m in e.MembersFunctionsAndValues do
-            yield {ent=e; mem=m; typ=FSharpTypes.cvt m.FullType |> index |> FSharpTypes.debinarize} ]
+            yield {Entity=e; Member=m; Typ=FSharpTypes.cvt m.FullType |> index |> FSharpTypes.debinarize} ]
 
 let addReferences news =
   assemblies <- assemblies  |>Set.union<| set news
@@ -82,7 +82,7 @@ let typeFind s =
   let ty = Parser.parse s |> index |> ParsedTypes.dealias
   types |> Seq.filter (tipe >> matches ty)
 let nameFind s = 
-  types |> Seq.filter (fun {mem = m} -> m.DisplayName = s)
+  types |> Seq.filter (fun {Member = m} -> m.DisplayName = s)
 let search (s : string) =
   if s.Contains "->" then typeFind s else nameFind s
 let textSearch s =

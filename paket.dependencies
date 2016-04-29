@@ -1,7 +1,6 @@
-source C:\Users\Kurt\Projects\FsCheck\fsharp\bin
 source https://ci.appveyor.com/nuget/fscheck
 source https://www.nuget.org/api/v2/
 
-nuget FParsec 1.0.1 framework: >= net451
-nuget FSharp.Compiler.Service 0.0.59 framework: >= net451
-nuget NUnit 2.6.3 framework: >= net35
+nuget FParsec framework: >= net451
+nuget FSharp.Compiler.Service framework: >= net451
+nuget NUnit < 3.0 framework: >= net35

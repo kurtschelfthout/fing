@@ -44,15 +44,15 @@ type Tester() =
   let ts =
     core.Contents.Entities
     |> Seq.map (fun e -> e.MembersFunctionsAndValues 
-                         |> Seq.map (fun m -> {Fing.ent=e
-                                               Fing.mem=m
-                                               Fing.typ=FSharpTypes.cvt m.FullType |> Types.index |> FSharpTypes.debinarize
+                         |> Seq.map (fun m -> {Fing.Entity=e
+                                               Fing.Member=m
+                                               Fing.Typ=FSharpTypes.cvt m.FullType |> Types.index |> FSharpTypes.debinarize
                                                }))
     |> Seq.concat
     |> Seq.toArray
   let actuallyFound expected (t : Result) =
-    let toFind = format t.typ
-    let exp = format expected.typ
+    let toFind = format t.Typ
+    let exp = format expected.Typ
     let found = Fing.typeFind toFind |> Seq.toArray
 
     found |> Seq.tryFind ((=) expected)
