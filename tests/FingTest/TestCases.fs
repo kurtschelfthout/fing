@@ -50,7 +50,7 @@ let memberpasses =
     "read : ?foo:int->int"
     "read : ?foo:int->bar:int->int"] @ [ for t in typedefpasses -> "read"+t+" : 'a->'b" ]
 
-let passes = 
+let validParserInputs = 
   [  "int"
      "int->int"
      "int ->   int-> \t int"
@@ -120,10 +120,10 @@ let passes =
      ] @ [for m in memberpasses -> "list<'a> when 'a : ("+m+")"
      ] @ ["set<'a> -> list<'a>"]
 
-let test () = Seq.map Parser.parse passes
+let test () = Seq.map Parser.parse validParserInputs
 
 
-let passresults =
+let validParserResults =
  [  Id "int"
      ;Arrow [Id "int"; Id "int"]
      ;Arrow [Id "int"; Id "int"; Id "int"]

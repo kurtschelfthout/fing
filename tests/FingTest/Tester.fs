@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2010, Nathan Sanders
 // Licence: New BSD. See accompanying documentation.
 module Fing.Tester
+
 open Util
 open Types
 open TestCases
@@ -12,17 +13,10 @@ open Swensen.Unquote
 
 let mapSnd f (a,b) = (a, f b)
 
-let safezip l1 l2 = 
-  let len = min (List.length l1) (List.length l2)
-  Seq.zip (Seq.take len l1) (Seq.take len l2)
+let testAll l = 
+        l |> Seq.mapi (fun i (exp,act) -> testCase (sprintf "%i" i) (fun _ -> test <@ exp = act @>))
 
-let testall results =
-  results
-  //|> Seq.take 20
-  |> Seq.iteri (fun i (exp,act) -> test <@ exp = act @>)
-
-
-let testWith f pairs = List.map (mapSnd f) pairs |> testall
+let testWith f pairs = Seq.map (mapSnd f) pairs |> testAll
 
 //// correctness ////
 // NOTE: Should this be part of production code instead of testing?
@@ -57,51 +51,22 @@ type Tester() =
 
     found |> Seq.tryFind ((=) expected)
 
-  let arrayShuffle (ara : 'a[]) =
-    let rnd = System.Random()
-    for i in [ara.Length .. -1 .. 1] do
-      let j = rnd.Next i
-      let tmp = ara.[j]
-      ara.[j] <- ara.[i-1]
-      ara.[i-1] <- tmp
-    ara
-
   /// Make sure that every function in FSharp.Core can be found if you at least search
   /// for the exact type obtained from the FSharpType itself.
   [<Tests>]
-  member __.SmokeTest() =
-    testCase "smokeTest" <| fun _ ->
-        Fing.addReferences [] //inits the type list
-        Seq.zip (Seq.map Some ts) (Seq.map2 actuallyFound ts ts) |> testall
-
-//  [<Test>]
-//  member this.ShuffleSmokeTest() =
-//    let rec shuffled = function
-//    | Arrow ts when List.length ts > 2  && List.length ts < 7 -> 
-//      let args,res = Seq.butLast (List.map shuffled ts)
-//      let args' = arrayShuffle (Array.ofSeq args) |> List.ofArray
-//      Arrow (args' @ [res])
-//    | Tuple ts when List.length ts < 6 ->
-//      Tuple (arrayShuffle (Array.ofSeq (List.map shuffled ts)) |> List.ofArray)
-//    | t -> t
-//    ts |> Seq.iteri (fun i t ->
-//                      let t' = {t with typ = shuffled t.typ }
-//                      Assert.AreEqual(Some t,
-//                                      actuallyFound t t',
-//                                      sprintf "%d. %s: %s" i t.mem.DisplayName (format t'.typ)))
-
+  member __.SmokeTest =
+    testList "smokeTest" <|
+        let init = lazy Fing.addReferences [] //inits the type list
+        seq { do init.Value
+              yield! Seq.map2 actuallyFound ts ts
+                     |> Seq.zip (Seq.map Some ts)  
+                     |> testAll
+        }
 
 module TypeTester =
 
-  [<Tests>]
-  let testFormat() =
-    testCase "testFormat" <| fun _ ->
-        safezip (List.map Parser.parse passes) 
-                (List.map (Types.format >> Parser.parse) passresults )
-        |> testall
-
-  [<Tests>]
-  let testIndex() =
+  //[<Tests>]
+  let testIndex =
     let usedIndices t =
       let usedIndicesTyp = function
       | Var v -> Some (Set.singleton v)
@@ -115,15 +80,14 @@ module TypeTester =
       | Var v -> Some (Var (Map.find v map))
       | _ -> None
       Types.map subst' id t
-    testCase "testIndex" <| fun _ ->
-        safezip (List.map (usedIndices >> mapSnd randomise >> subst >> Types.index) 
-                          passresults)
-                passresults
-        |> testall
+    testList "testIndex" ( 
+        validParserResults
+        |> Seq.zip (validParserResults |> Seq.map (usedIndices >> mapSnd randomise >> subst >> Types.index))
+        |> testAll)
 
   [<Tests>]
-  let testRevMap() =
-    testCase "testRevMap" <| fun _ ->
+  let testRevMap =
+    testList "testRevMap" <|
         testWith Types.revMap [
           Map.empty, Map.empty
           Map.ofList [("a","b")], Map.ofList [("b","a")]
@@ -131,13 +95,23 @@ module TypeTester =
         ]
 
 
-module ParseTester =
+module ParserTest =
 
-  [<Tests>]
-  let parseTest = 
-    testCase "parseTest" <| fun _ ->
-        test <@ List.length passes = List.length passresults @>
-        testall (List.zip passresults (List.map Parser.parse passes))
-        List.zip passresults (List.map Parser.parse passes) 
-        |> List.iteri (fun i (exp,act) -> test <@ exp = act @>)
+    [<Tests>]
+    let testFormat =
+        testList "testFormat" (
+            Seq.map (Types.format >> Parser.parse) validParserResults
+            |> Seq.zip (Seq.map Parser.parse validParserInputs)      
+            |> testAll)
+            
+
+    [<Tests>]
+    let parseTest = 
+        testList "parseTest" <|
+            seq {
+                yield testCase "precheck" (fun _ -> test <@ List.length validParserInputs = List.length validParserResults @>)
+                yield! Seq.map Parser.parse validParserInputs
+                       |> Seq.zip validParserResults 
+                       |> testAll
+            }
 
