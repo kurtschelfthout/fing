@@ -4,8 +4,8 @@ module Fing.Tester
 open Util
 open Types
 open TestCases
-open NUnit.Framework
-open System.Text.RegularExpressions
+open Fuchu
+open Swensen.Unquote
 
 //// testing utils ////
 // these are surprisingly easy to write and understand in their non-general tuple forms
@@ -19,7 +19,7 @@ let safezip l1 l2 =
 let testall results =
   results
   //|> Seq.take 20
-  |> Seq.iteri (fun i (exp,act) -> Assert.AreEqual(exp :> obj,act :> obj, sprintf "%d. %A" i act))
+  |> Seq.iteri (fun i (exp,act) -> test <@ exp = act @>)
 
 
 let testWith f pairs = List.map (mapSnd f) pairs |> testall
@@ -37,7 +37,7 @@ let testWith f pairs = List.map (mapSnd f) pairs |> testall
 //            | unbounds -> Some unbounds
 //  | _ -> None
 
-[<TestFixture>] 
+
 type Tester() =
   let core = loadAssemblies [] |> Seq.find (fun asm -> asm.SimpleName.Contains("FSharp.Core"))
   // let parsec = Microsoft.FSharp.Metadata.FSharpAssembly.FromFile "Y:/src/Fing/Fing/bin/Debug/FParsec.dll"
@@ -68,10 +68,11 @@ type Tester() =
 
   /// Make sure that every function in FSharp.Core can be found if you at least search
   /// for the exact type obtained from the FSharpType itself.
-  [<Test>]
-  member this.SmokeTest() =
-    Fing.addReferences [] //inits the type list
-    Seq.zip (Seq.map Some ts) (Seq.map2 actuallyFound ts ts) |> testall
+  [<Tests>]
+  member __.SmokeTest() =
+    testCase "smokeTest" <| fun _ ->
+        Fing.addReferences [] //inits the type list
+        Seq.zip (Seq.map Some ts) (Seq.map2 actuallyFound ts ts) |> testall
 
 //  [<Test>]
 //  member this.ShuffleSmokeTest() =
@@ -92,13 +93,14 @@ type Tester() =
 
 module TypeTester =
 
-  [<Test>]
+  [<Tests>]
   let testFormat() =
-    safezip (List.map Parser.parse passes) 
-            (List.map (Types.format >> Parser.parse) passresults )
-    |> testall
+    testCase "testFormat" <| fun _ ->
+        safezip (List.map Parser.parse passes) 
+                (List.map (Types.format >> Parser.parse) passresults )
+        |> testall
 
-  [<Test>]
+  [<Tests>]
   let testIndex() =
     let usedIndices t =
       let usedIndicesTyp = function
@@ -113,26 +115,29 @@ module TypeTester =
       | Var v -> Some (Var (Map.find v map))
       | _ -> None
       Types.map subst' id t
-    safezip (List.map (usedIndices >> mapSnd randomise >> subst >> Types.index) 
-                      passresults)
-            passresults
-    |> testall
+    testCase "testIndex" <| fun _ ->
+        safezip (List.map (usedIndices >> mapSnd randomise >> subst >> Types.index) 
+                          passresults)
+                passresults
+        |> testall
 
-  [<Test>]
+  [<Tests>]
   let testRevMap() =
-    testWith Types.revMap [
-      Map.empty, Map.empty
-      Map.ofList [("a","b")], Map.ofList [("b","a")]
-      Map.ofList [("a","b");("a","c")], Map.ofList [("c", "a")]
-    ]
+    testCase "testRevMap" <| fun _ ->
+        testWith Types.revMap [
+          Map.empty, Map.empty
+          Map.ofList [("a","b")], Map.ofList [("b","a")]
+          Map.ofList [("a","b");("a","c")], Map.ofList [("c", "a")]
+        ]
 
 
 module ParseTester =
 
-  [<Test>]
-  let parseTest() = 
-    Assert.AreEqual(List.length passes, List.length passresults)
-    testall (List.zip passresults (List.map Parser.parse passes))
-    List.zip passresults (List.map Parser.parse passes) 
-    |> List.iteri (fun i (exp,act) -> Assert.AreEqual(exp,act,sprintf "%d. %A" i act))
+  [<Tests>]
+  let parseTest = 
+    testCase "parseTest" <| fun _ ->
+        test <@ List.length passes = List.length passresults @>
+        testall (List.zip passresults (List.map Parser.parse passes))
+        List.zip passresults (List.map Parser.parse passes) 
+        |> List.iteri (fun i (exp,act) -> test <@ exp = act @>)
 

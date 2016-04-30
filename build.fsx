@@ -38,8 +38,7 @@ let tags = "fsharp search"
 // File system information
 let solutionFile  = "Fing.sln"
 
-// Pattern specifying assemblies to be tested using NUnit
-let testAssemblies = "tests/**/bin/Release/*Test*.dll"
+let testAssemblies = "tests/**/bin/Release/*Test*.exe"
 
 // Git configuration (used for publishing documentation in gh-pages branch)
 // The profile where the project is posted
@@ -133,14 +132,15 @@ Target "Build" (fun _ ->
 // --------------------------------------------------------------------------------------
 // Run the unit tests using test runner
 
-Target "RunTests" (fun _ ->
-    !! testAssemblies
-    |> NUnit (fun p ->
-        { p with
-            DisableShadowCopy = true
-            TimeOut = TimeSpan.FromMinutes 20.
-            OutputFile = "TestResults.xml" })
-)
+Target "RunTests" <| fun _ ->
+    let errorCode = 
+        !! testAssemblies    
+        |> Seq.map (fun p -> if not isMono then p,null else "mono",p)
+        |> Seq.map (fun (p,a) -> asyncShellExec { defaultParams with Program = p; CommandLine = a })
+        |> Async.Parallel
+        |> Async.RunSynchronously
+        |> Array.sum
+    if errorCode <> 0 then failwith "Error in tests"
 
 // --------------------------------------------------------------------------------------
 // Build a NuGet package
