@@ -31,6 +31,7 @@ let revMap =
 
 let unaliases = revMap aliases
 
+
 type Typar = 
     | Anonymous
     | Normal of string
@@ -63,6 +64,7 @@ and When =
     | Subtype of Typar * Typ
     | Sig of Typar * Typ * Typ * Property
     | TyparConstraint of list<When> // where Typ = Constraint
+
 
 let rec format = 
     function 
@@ -182,6 +184,15 @@ let fold next combine unit =
     // callers will have to provide next/combine/unit functions for it as well
     transformer
 
+// WHOA! Hardcoding aliases into a map called 'aliases' is a terrible idea!
+// TODO: Fix this to search FSharp.Core for aliases and store them.
+let dealias = 
+    let dealias' = 
+        function 
+        | Id id when Map.containsKey id aliases -> Some(Id(Map.find id aliases))
+        | _ -> None
+    map dealias' id // might need to use something besides id someday
+
 /// an infinite stream of possible variable names - for nicely named de Bruijn indices
 #nowarn "40" // INFINITE SEQ IS INFINITE
 
@@ -199,7 +210,7 @@ let rec names = // and that's OK.
 // in particular, I use state to make multi-parameter things like Arrow and Tuple
 // less painful to write; it's mapM in the State monad instead of fold over tuples.
 // also I don't use numbers, so that the output is a syntactically valid F# type.
-let rec index t = 
+let index t = 
     let nextIndex = 
         let names = names.GetEnumerator()
         names.MoveNext() |> ignore // ignore: INFINITE SEQ.MoveNext is always true.

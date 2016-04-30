@@ -79,7 +79,7 @@ let addReferences news =
 // (other functions aren't private yet because it's so inconvenient;
 // probably I should just move everything else to another module.)
 let typeFind s =
-  let ty = Parser.parse s |> index |> ParsedTypes.dealias
+  let ty = Parser.parse s |> index |> Types.dealias
   types |> Seq.filter (tipe >> matches ty)
 let nameFind s = 
   types |> Seq.filter (fun {Member = m} -> m.DisplayName = s)

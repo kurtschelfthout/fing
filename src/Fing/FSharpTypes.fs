@@ -7,14 +7,14 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Types
 
 let rec debinarize t = 
-    let rec debinarise = 
+    let rec helper = 
         function 
         | Arrow [ t; Arrow ts ] -> 
             match debinarize (Arrow ts) with
             | Arrow ts -> Some(Arrow(debinarize t :: ts))
             | _ -> failwith "oh no"
         | _ -> None
-    Types.map debinarise id t
+    Types.map helper id t
 
 let isArray (e : FSharpType) = 
     let name = e.TypeDefinition.DisplayName
@@ -92,7 +92,7 @@ and canonicalType (e : FSharpEntity) =
         // unit-of-measure types do not have IsAbbreviation set.
         // TODO: I have no idea how to make this work once real alias detection
         // is implemented, because it will (probably) be based on IsAbbreviation.
-        Id e.DisplayName |> ParsedTypes.dealias // e.ReflectionType |> string
+        Id e.DisplayName |> Types.dealias // e.ReflectionType |> string
 
 and whenify (param : FSharpGenericParameter) 
     (con : FSharpGenericParameterConstraint) = 
