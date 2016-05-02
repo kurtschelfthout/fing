@@ -2,7 +2,6 @@
 // Licence: New BSD. See accompanying documentation.
 module Parser
 
-open System.Text.RegularExpressions
 open Util
 open Types
 open FParsec

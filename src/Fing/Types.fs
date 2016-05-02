@@ -116,6 +116,9 @@ and formatConstraint =
         sprintf "%s : delegate<%s,%s>" (formatTypar v) (format arg) (format res)
     | Subtype(v, t) -> formatTypar v + " :> " + format t
     | Sig(v, name, t, prop) -> 
+        let chompchomp (s : string) = 
+            if s.Length > 2 then s.[1..s.Length - 2]
+            else s
         sprintf "%s : (%s : %s%s)" (formatTypar v) (format name) 
             (format t |> chompchomp) (formatProperty prop)
     | TyparConstraint cons -> 
@@ -198,13 +201,14 @@ let dealias =
 
 let rec names = // and that's OK.
                 
-    let letters = [ 'a'..'z' ] |> List.map string
+    let letters = [| 'a'..'z' |] |> Array.map string
     seq { 
         yield! letters
         for n in names do
             for l in letters do
                 yield n + l
     }
+    
 
 // this is not really de Bruijn indexing but it is similar
 // in particular, I use state to make multi-parameter things like Arrow and Tuple
@@ -222,7 +226,7 @@ let index t =
     let indices = ref Map.empty
     
     let rec update v = 
-        match Map.tryFind v indices.Value with
+        match Map.tryFind v !indices with
         | Some i -> i
         | None -> 
             let i = 
@@ -233,8 +237,7 @@ let index t =
             indices.Value <- Map.add v i indices.Value
             i
     
-    let updateVar = 
-        function 
+    let updateVar = function 
         | Var v -> Some(Var(update v))
         | _ -> None
     

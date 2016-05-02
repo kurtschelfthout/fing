@@ -16,6 +16,7 @@ let mapSnd f (a,b) = (a, f b)
 let testAll l = 
         l |> Seq.mapi (fun i (exp,act) -> testCase (sprintf "%i" i) (fun _ -> test <@ exp = act @>))
 
+
 let testWith f pairs = Seq.map (mapSnd f) pairs |> testAll
 
 //// correctness ////
@@ -53,7 +54,7 @@ type Tester() =
 
   /// Make sure that every function in FSharp.Core can be found if you at least search
   /// for the exact type obtained from the FSharpType itself.
-  [<Tests>]
+  
   member __.SmokeTest =
     testList "smokeTest" <|
         let init = lazy Fing.addReferences [] //inits the type list
@@ -63,9 +64,15 @@ type Tester() =
                      |> testAll
         }
 
+module SmokeTest =
+    [<Tests>]
+    let smokeTest =
+        let i = Tester()
+        i.SmokeTest
+
 module TypeTester =
 
-  //[<Tests>]
+ // [<Tests>]
   let testIndex =
     let usedIndices t =
       let usedIndicesTyp = function
@@ -73,17 +80,30 @@ module TypeTester =
       | _ -> None
       printfn "%s" (Types.format t) // DEBUG
       (t, Types.fold usedIndicesTyp Set.unionMany Set.empty t)
-    let randomise seq = Seq.zip seq (seq |> Array.ofSeq |> Array.shuffle)
+    let shuffle a = 
+        let rnd = System.Random()
+        let len = Array.length a
+        
+        let aswap i j = 
+            let tmp = a.[i]
+            a.[i] <- a.[j]
+            a.[j] <- tmp
+        for i = len - 1 downto 0 do
+            aswap i (rnd.Next(i + 1))
+        a
+
+    let randomise (seq:Set<Typar>) = Seq.zip seq (seq |> Array.ofSeq |> shuffle)
     let subst (t, shuffles) =
       let map = Map.ofSeq shuffles
       let subst' = function
       | Var v -> Some (Var (Map.find v map))
       | _ -> None
       Types.map subst' id t
+    let roundtrip f =
+        Seq.mapi (fun i exp -> testCase (sprintf "%i" i) (fun _ -> test <@ Types.index exp = %f exp @>))
     testList "testIndex" ( 
         validParserResults
-        |> Seq.zip (validParserResults |> Seq.map (usedIndices >> mapSnd randomise >> subst >> Types.index))
-        |> testAll)
+        |> roundtrip (fun inp -> <@ inp |> usedIndices |> mapSnd randomise |> subst |> Types.index @>))
 
   [<Tests>]
   let testRevMap =

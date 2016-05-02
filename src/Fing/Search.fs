@@ -69,5 +69,5 @@ let rec variants : Typ -> Typ list =
     // constraint variants go here (maybe)
     | Constraint(c, t) -> List.map (curry Constraint c) (variants t)
 
-let rec matches user library = 
+let matches user library = 
     List.exists (fun t -> index t = library) (variants user)

@@ -7,7 +7,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Types
 
 let rec debinarize t = 
-    let rec helper = 
+    let helper = 
         function 
         | Arrow [ t; Arrow ts ] -> 
             match debinarize (Arrow ts) with
@@ -17,6 +17,7 @@ let rec debinarize t =
     Types.map helper id t
 
 let isArray (e : FSharpType) = 
+    //e.TypeDefinition.IsArrayType?
     let name = e.TypeDefinition.DisplayName
     // it appears that DisplayName can either be array or []
     // I think this is inconsistency on the part of either the Powerpack or (more likely)
@@ -27,6 +28,7 @@ let isArray (e : FSharpType) =
 
 /// e must be the FSharpType of an array
 let dimensions (e : FSharpType) = 
+    
     match e.TypeDefinition.DisplayName with
     | "array" -> 1
     | brackets -> brackets.Length - 1
@@ -39,7 +41,7 @@ let tryFindConstraint (param : FSharpGenericParameter) (p, f) =
 let rec optionsum = 
     function 
     | [] -> None
-    | Some(x) :: xs -> Some(x)
+    | Some(x) :: _ -> Some(x)
     | None :: xs -> optionsum xs
 
 (* FSharpType -> Typ, no longer a Ty<System.Type,string> 

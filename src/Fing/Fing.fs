@@ -5,7 +5,6 @@ module Fing
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Types
-open Util
 open Search
 open System.IO
 
